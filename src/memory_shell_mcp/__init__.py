@@ -20,7 +20,7 @@ import tempfile
 from typing import Optional
 from fastmcp import FastMCP
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # 创建MCP服务器实例
 mcp = FastMCP(
@@ -84,6 +84,17 @@ def get_system_info() -> dict:
         "platform": platform.platform(),
         "machine": platform.machine(),
     }
+
+
+def escape_class_name(class_name: str) -> str:
+    """
+    转义类名中的特殊字符，防止 shell 解释
+    
+    Java 内部类使用 $ 分隔符（如 com.example.Outer$Inner），
+    但 $ 在 shell 中是变量引用符号，需要转义。
+    """
+    # 转义 $ 符号，防止被 shell 解释为变量
+    return class_name.replace("$", "\\$")
 
 def execute_local_command(command: str, timeout: int = 300) -> dict:
     """本地执行命令"""
@@ -552,7 +563,8 @@ def view_class_code(
         return {"success": False, "source_code": "", "error": "未指定tools_dir，请先调用download_detector_tools或设置TOOLS_DIR环境变量"}
     
     cli_jar = os.path.join(tools_dir, "memory-shell-detector-cli.jar") if not use_ssh else f"{tools_dir}/memory-shell-detector-cli.jar"
-    cmd = f'java -jar "{cli_jar}" -v {class_name} -p {pid}'
+    escaped_class_name = escape_class_name(class_name)
+    cmd = f'java -jar "{cli_jar}" -v {escaped_class_name} -p {pid}'
     
     if use_ssh:
         result = execute_ssh_command(host=ssh_host, username=ssh_username, command=cmd, password=ssh_password, key_path=ssh_key_path, port=ssh_port)
@@ -615,9 +627,10 @@ def remove_memory_shell(
         return {"success": False, "action": "错误", "message": "未指定tools_dir，请先调用download_detector_tools或设置TOOLS_DIR环境变量"}
     
     cli_jar = os.path.join(tools_dir, "memory-shell-detector-cli.jar") if not use_ssh else f"{tools_dir}/memory-shell-detector-cli.jar"
+    escaped_class_name = escape_class_name(class_name)
     
     if not ai_confirmed:
-        view_cmd = f'java -jar "{cli_jar}" -v {class_name} -p {pid}'
+        view_cmd = f'java -jar "{cli_jar}" -v {escaped_class_name} -p {pid}'
         if use_ssh:
             result = execute_ssh_command(host=ssh_host, username=ssh_username, command=view_cmd, password=ssh_password, key_path=ssh_key_path, port=ssh_port)
         else:
@@ -632,7 +645,7 @@ def remove_memory_shell(
             "pid": pid
         }
     
-    remove_cmd = f'echo "y" | java -jar "{cli_jar}" -r {class_name} -p {pid}'
+    remove_cmd = f'echo "y" | java -jar "{cli_jar}" -r {escaped_class_name} -p {pid}'
     
     if use_ssh:
         result = execute_ssh_command(host=ssh_host, username=ssh_username, command=remove_cmd, password=ssh_password, key_path=ssh_key_path, port=ssh_port)
