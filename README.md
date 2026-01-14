@@ -42,6 +42,14 @@ uvx memory-shell-mcp
 
 ### MCP 配置（uvx 方式）
 
+> **支持 MCP 的客户端**：本工具可配置到任何支持 Model Context Protocol 的 AI 客户端，包括但不限于：
+> - **IDE/编辑器**：[Cursor](https://cursor.com)、[Windsurf](https://codeium.com/windsurf)、[VS Code](https://code.visualstudio.com)（需安装 Copilot 扩展）、[Zed](https://zed.dev)、[Kiro](https://kiro.dev)
+> - **AI 助手**：[Claude Desktop](https://claude.ai/download)、[Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+> - **开发工具**：[Cline](https://github.com/cline/cline)（VS Code 扩展）、[Continue](https://continue.dev)、[Roo Code](https://roocode.com)
+> - **其他**：[5ire](https://5ire.app)、[BeeAI](https://beeai.dev)、[Genkit](https://firebase.google.com/docs/genkit)、[Goose](https://block.github.io/goose)
+>
+> 以下是常用客户端的配置示例：
+
 #### Kiro
 
 在 `.kiro/settings/mcp.json` 中添加：
