@@ -20,7 +20,7 @@ import tempfile
 from typing import Optional
 from fastmcp import FastMCP
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # 创建MCP服务器实例
 mcp = FastMCP(
@@ -213,20 +213,28 @@ def execute_command(
     timeout: int = 300
 ) -> dict:
     """
-    执行命令（本地或SSH远程）
+    执行系统命令（本地或通过 SSH 远程执行）
+    
+    这是一个通用的命令执行工具，可用于：
+    - 检查 Java 环境是否正常（java -version）
+    - 查看系统进程状态（ps aux）
+    - 执行其他辅助命令
+    
+    注意：内存马检测的核心功能请使用专用工具（list_java_processes、scan_process 等），
+    此工具仅用于辅助操作。
     
     Args:
-        command: 要执行的命令
-        use_ssh: 是否使用SSH远程执行
-        ssh_host: SSH主机地址（不指定则从环境变量SSH_HOST读取）
-        ssh_username: SSH用户名（不指定则从环境变量SSH_USERNAME读取）
-        ssh_password: SSH密码（不指定则从环境变量SSH_PASSWORD读取）
-        ssh_key_path: SSH私钥路径（不指定则从环境变量SSH_KEY_PATH读取）
-        ssh_port: SSH端口，默认22（不指定则从环境变量SSH_PORT读取）
-        timeout: 命令超时时间（秒）
+        command: 要执行的 shell 命令
+        use_ssh: 是否使用 SSH 远程执行
+        ssh_host: SSH 主机地址（不指定则从环境变量 SSH_HOST 读取）
+        ssh_username: SSH 用户名（不指定则从环境变量 SSH_USERNAME 读取）
+        ssh_password: SSH 密码（不指定则从环境变量 SSH_PASSWORD 读取）
+        ssh_key_path: SSH 私钥路径（不指定则从环境变量 SSH_KEY_PATH 读取）
+        ssh_port: SSH 端口，默认 22（不指定则从环境变量 SSH_PORT 读取）
+        timeout: 命令超时时间（秒），默认 300 秒
     
     Returns:
-        执行结果字典，包含success、stdout、stderr、return_code
+        执行结果，包含 success、stdout、stderr、return_code
     """
     if use_ssh:
         ssh_config = get_ssh_config()
@@ -267,19 +275,25 @@ def download_detector_tools(
     ssh_port: int = 22
 ) -> dict:
     """
-    下载内存马检测工具到指定目录
+    下载 Java 内存马检测工具包（detector-agent.jar 和 detector-cli.jar）
+    
+    此工具会下载两个核心 jar 包：
+    - detector-agent-1.0.0-SNAPSHOT.jar: Java Agent，用于注入目标 JVM 进程
+    - memory-shell-detector-cli.jar: 命令行工具，提供扫描、反编译、移除等功能
+    
+    这是使用内存马检测功能的前置步骤，下载完成后才能执行后续的扫描和分析操作。
     
     Args:
-        tools_dir: 工具存放目录，不指定则从环境变量TOOLS_DIR读取，都没有则使用系统临时目录
+        tools_dir: 工具存放目录，不指定则从环境变量 TOOLS_DIR 读取，都没有则使用系统临时目录
         use_ssh: 是否在远程服务器上下载
-        ssh_host: SSH主机地址（不指定则从环境变量SSH_HOST读取）
-        ssh_username: SSH用户名（不指定则从环境变量SSH_USERNAME读取）
-        ssh_password: SSH密码（不指定则从环境变量SSH_PASSWORD读取）
-        ssh_key_path: SSH私钥路径（不指定则从环境变量SSH_KEY_PATH读取）
-        ssh_port: SSH端口（不指定则从环境变量SSH_PORT读取）
+        ssh_host: SSH 主机地址（不指定则从环境变量 SSH_HOST 读取）
+        ssh_username: SSH 用户名（不指定则从环境变量 SSH_USERNAME 读取）
+        ssh_password: SSH 密码（不指定则从环境变量 SSH_PASSWORD 读取）
+        ssh_key_path: SSH 私钥路径（不指定则从环境变量 SSH_KEY_PATH 读取）
+        ssh_port: SSH 端口（不指定则从环境变量 SSH_PORT 读取）
     
     Returns:
-        下载结果，包含工具路径
+        下载结果，包含工具目录路径和 jar 文件名
     """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
@@ -395,7 +409,22 @@ def list_java_processes(
     ssh_key_path: Optional[str] = None,
     ssh_port: int = 22
 ) -> dict:
-    """列出所有Java进程 (对应 -l 命令)"""
+    """
+    执行 memory-shell-detector-cli.jar 列出系统中所有运行的 Java 进程
+    
+    底层命令: java -jar memory-shell-detector-cli.jar -l
+    
+    此工具通过调用内存马检测器的 CLI jar 包，扫描系统中所有 Java 进程，
+    返回进程 PID、进程名称等信息，用于后续选择目标进程进行内存马扫描。
+    
+    Args:
+        tools_dir: 检测工具 jar 包所在目录
+        use_ssh: 是否通过 SSH 在远程服务器执行
+        ssh_host/ssh_username/ssh_password/ssh_key_path/ssh_port: SSH 连接参数
+    
+    Returns:
+        processes: Java 进程列表信息
+    """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
             ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port
@@ -430,7 +459,28 @@ def scan_process(
     ssh_key_path: Optional[str] = None,
     ssh_port: int = 22
 ) -> dict:
-    """扫描指定Java进程检测内存马 (对应 -s 命令)"""
+    """
+    执行 memory-shell-detector-cli.jar 对指定 Java 进程进行内存马扫描检测
+    
+    底层命令: java -jar memory-shell-detector-cli.jar -s <pid>
+    
+    此工具通过 Java Agent 技术注入目标 JVM 进程，扫描以下可疑组件：
+    - Servlet/Filter/Listener 类型内存马
+    - Spring Controller/Interceptor 内存马
+    - Agent 类型内存马
+    - 其他动态注册的恶意类
+    
+    扫描结果会列出所有可疑类的完整类名，供后续反编译分析。
+    
+    Args:
+        pid: 目标 Java 进程的 PID
+        tools_dir: 检测工具 jar 包所在目录
+        use_ssh: 是否通过 SSH 在远程服务器执行
+        ssh_host/ssh_username/ssh_password/ssh_key_path/ssh_port: SSH 连接参数
+    
+    Returns:
+        scan_result: 扫描结果，包含可疑类列表
+    """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
             ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port
@@ -466,7 +516,29 @@ def view_class_code(
     ssh_key_path: Optional[str] = None,
     ssh_port: int = 22
 ) -> dict:
-    """查看可疑类的反编译源代码 (对应 -v -p 命令)"""
+    """
+    执行 memory-shell-detector-cli.jar 从 JVM 内存中提取并反编译指定类的字节码
+    
+    底层命令: java -jar memory-shell-detector-cli.jar -v <class_name> -p <pid>
+    
+    此工具通过 Java Agent 从运行中的 JVM 进程内存中 dump 指定类的字节码，
+    然后使用内置反编译器将字节码还原为可读的 Java 源代码。
+    
+    这是分析内存马的关键步骤，可以查看：
+    - 类的完整实现逻辑
+    - 恶意代码的具体行为（如命令执行、文件操作、网络连接等）
+    - 内存马的注入方式和触发条件
+    
+    Args:
+        class_name: 要反编译的完整类名（如 com.example.EvilFilter）
+        pid: 目标 Java 进程的 PID
+        tools_dir: 检测工具 jar 包所在目录
+        use_ssh: 是否通过 SSH 在远程服务器执行
+        ssh_host/ssh_username/ssh_password/ssh_key_path/ssh_port: SSH 连接参数
+    
+    Returns:
+        source_code: 反编译后的 Java 源代码
+    """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
             ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port
@@ -503,7 +575,33 @@ def remove_memory_shell(
     ssh_key_path: Optional[str] = None,
     ssh_port: int = 22
 ) -> dict:
-    """移除内存马 (对应 -r -p 命令)，需要AI确认后才能执行"""
+    """
+    执行 memory-shell-detector-cli.jar 从 JVM 内存中移除指定的内存马类
+    
+    底层命令: java -jar memory-shell-detector-cli.jar -r <class_name> -p <pid>
+    
+    此工具通过 Java Agent 技术从运行中的 JVM 进程中卸载/禁用指定的恶意类，
+    实现不重启服务的情况下清除内存马。
+    
+    移除机制：
+    - 对于 Filter/Servlet/Listener：从 Web 容器中注销
+    - 对于 Spring 组件：从 Spring 容器中移除 Bean
+    - 对于 Agent 类型：尝试还原被 hook 的方法
+    
+    安全机制：首次调用时会先反编译目标类源码供 AI 分析确认，
+    确认是内存马后需设置 ai_confirmed=True 再次调用才会执行移除。
+    
+    Args:
+        class_name: 要移除的内存马完整类名
+        pid: 目标 Java 进程的 PID
+        tools_dir: 检测工具 jar 包所在目录
+        ai_confirmed: AI 是否已确认该类为内存马（首次调用设为 False）
+        use_ssh: 是否通过 SSH 在远程服务器执行
+        ssh_host/ssh_username/ssh_password/ssh_key_path/ssh_port: SSH 连接参数
+    
+    Returns:
+        首次调用返回反编译源码供分析，确认后返回移除结果
+    """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
             ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port
@@ -564,7 +662,28 @@ def export_report(
     ssh_key_path: Optional[str] = None,
     ssh_port: int = 22
 ) -> dict:
-    """导出检测报告"""
+    """
+    执行 memory-shell-detector-cli.jar 生成内存马检测报告
+    
+    底层命令: java -jar memory-shell-detector-cli.jar --report <output_file> -p <pid> -f <format>
+    
+    此工具将扫描结果导出为结构化报告，包含：
+    - 扫描时间和目标进程信息
+    - 检测到的所有可疑类列表
+    - 每个可疑类的风险等级和类型判断
+    - 反编译的源代码片段
+    
+    Args:
+        pid: 目标 Java 进程的 PID
+        output_file: 报告输出文件路径
+        tools_dir: 检测工具 jar 包所在目录
+        format: 报告格式（json/html/txt）
+        use_ssh: 是否通过 SSH 在远程服务器执行
+        ssh_host/ssh_username/ssh_password/ssh_key_path/ssh_port: SSH 连接参数
+    
+    Returns:
+        导出结果和报告文件路径
+    """
     if use_ssh:
         ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port = resolve_ssh_params(
             ssh_host, ssh_username, ssh_password, ssh_key_path, ssh_port
@@ -595,7 +714,18 @@ def export_report(
 
 @mcp.tool()
 def get_system_info_tool() -> dict:
-    """获取当前系统信息"""
+    """
+    获取当前系统环境信息
+    
+    返回操作系统类型、平台架构、临时目录等信息，
+    用于判断检测工具的兼容性和确定工具存放路径。
+    
+    Returns:
+        system: 操作系统（Linux/Windows/Darwin）
+        platform: 完整平台信息
+        machine: CPU 架构
+        temp_dir: 系统临时目录路径
+    """
     info = get_system_info()
     info["temp_dir"] = get_temp_dir()
     return info
@@ -603,7 +733,16 @@ def get_system_info_tool() -> dict:
 
 @mcp.tool()
 def check_network() -> dict:
-    """检测网络是否可用（用于判断是否可以下载工具）"""
+    """
+    检测网络连通性
+    
+    测试是否能访问工具下载服务器，用于在下载检测工具前确认网络状态。
+    如果网络不通，需要手动下载 jar 包或检查网络配置。
+    
+    Returns:
+        available: 网络是否可用
+        message: 状态描述信息
+    """
     return check_network_available()
 
 
