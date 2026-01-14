@@ -280,6 +280,11 @@ uv publish --token YOUR_PYPI_TOKEN
 uvx memory-shell-mcp
 ```
 
+## 参考项目
+
+- [memory-shell-detector](https://github.com/private-xss/memory-shell-detector) - Java 内存马检测工具核心实现
+- [Xget](https://github.com/xixu-me/Xget) - GitHub 文件加速下载服务
+
 ## License
 
 MIT License
