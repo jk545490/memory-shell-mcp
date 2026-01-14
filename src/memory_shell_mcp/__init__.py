@@ -20,22 +20,62 @@ import tempfile
 from typing import Optional
 from fastmcp import FastMCP
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # 创建MCP服务器实例
 mcp = FastMCP(
     name="memory-shell-detector",
     instructions="""
-    这是一个Java内存马检测和清理工具的MCP服务器。
+    这是一个 Java 内存马检测和清理工具的 MCP 服务器。
     
-    使用流程：
-    1. 首先使用 download_detector_tools 下载检测工具（或指定本地工具目录）
-    2. 使用 list_java_processes 列出Java进程
-    3. 使用 scan_process 扫描可疑进程
-    4. 使用 view_class_code 查看可疑类的源代码
-    5. 使用 remove_memory_shell 移除确认的内存马（会先获取源码让AI判断）
+    ## 完整检测流程
     
-    支持本地执行和SSH远程执行两种模式。
+    ### 第一步：准备工作
+    1. 调用 download_detector_tools 下载检测工具（或确认本地工具目录已配置）
+    2. 调用 list_java_processes 列出所有 Java 进程，找到目标进程 PID
+    
+    ### 第二步：扫描检测
+    3. 调用 scan_process(pid=目标PID) 扫描目标进程
+    4. 扫描结果会列出所有可疑类，注意记录完整类名
+    
+    ### 第三步：源码分析（关键步骤）
+    5. 对每个可疑类调用 view_class_code(class_name="类名", pid=PID) 反编译查看源码
+    6. 分析源码判断是否为内存马，判断标准：
+       - 是否包含命令执行代码（Runtime.exec、ProcessBuilder）
+       - 是否包含反射调用敏感方法
+       - 是否有异常的网络连接或文件操作
+       - 是否动态注册 Filter/Servlet/Listener
+       - 是否有加密/编码的可疑字符串
+       - 是否有 Webshell 特征（参数接收 cmd/command 等）
+       - 类名是否异常（随机字符串、与业务无关）
+    
+    ### 第四步：清除内存马
+    7. 确认是内存马后，调用 remove_memory_shell(class_name="类名", pid=PID, ai_confirmed=True)
+    8. 移除后立即再次调用 scan_process 验证是否清除成功
+    9. 重要：某些内存马需要多次移除才能彻底清除，如果仍然存在，重复步骤 7-8
+    
+    ### 第五步：生成报告（可选）
+    10. 调用 export_report 导出检测报告存档
+    
+    ## 内存马类型识别
+    
+    | 类型 | 特征 | 移除难度 |
+    |------|------|----------|
+    | Filter 型 | 实现 javax.servlet.Filter，动态注册到 FilterChain | 中等，可能需要多次移除 |
+    | Servlet 型 | 继承 HttpServlet，动态注册路由 | 中等 |
+    | Listener 型 | 实现 ServletRequestListener 等 | 较易 |
+    | Spring Controller | 使用 @RequestMapping 动态注册 | 中等 |
+    | Spring Interceptor | 实现 HandlerInterceptor | 中等 |
+    | Agent 型 | 通过 Instrumentation 修改字节码 | 困难，可能需要重启 |
+    | Valve 型 (Tomcat) | 继承 ValveBase | 中等 |
+    
+    ## 注意事项
+    - 移除前务必先反编译分析源码，避免误删正常组件
+    - 某些内存马有自我恢复机制，需要多次移除
+    - Agent 型内存马可能无法通过本工具完全移除，建议重启应用
+    - 建议在移除前导出报告留档
+    
+    支持本地执行和 SSH 远程执行两种模式。
     """
 )
 

@@ -155,13 +155,107 @@ memory-shell-mcp
 
 ## 使用流程
 
+### 完整检测流程
+
+#### 第一步：准备工作
+```
+1. 调用 download_detector_tools 下载检测工具
+2. 调用 list_java_processes 列出所有 Java 进程，找到目标进程 PID
+```
+
+#### 第二步：扫描检测
+```
+3. 调用 scan_process(pid=目标PID) 扫描目标进程
+4. 扫描结果会列出所有可疑类，记录完整类名
+```
+
+#### 第三步：源码分析（关键步骤）
+```
+5. 对每个可疑类调用 view_class_code(class_name="类名", pid=PID) 反编译查看源码
+6. 分析源码判断是否为内存马
+```
+
+**内存马判断标准：**
+- ✅ 是否包含命令执行代码（`Runtime.exec`、`ProcessBuilder`）
+- ✅ 是否包含反射调用敏感方法
+- ✅ 是否有异常的网络连接或文件操作
+- ✅ 是否动态注册 Filter/Servlet/Listener
+- ✅ 是否有加密/编码的可疑字符串（Base64、AES 等）
+- ✅ 是否有 Webshell 特征（参数名为 cmd/command/exec 等）
+- ✅ 类名是否异常（随机字符串、与业务无关）
+- ✅ 是否有类加载器操作（defineClass、ClassLoader）
+
+#### 第四步：清除内存马
+```
+7. 确认是内存马后，调用 remove_memory_shell(class_name="类名", pid=PID, ai_confirmed=True)
+8. 移除后立即再次调用 scan_process 验证是否清除成功
+9. 重要：某些内存马需要多次移除才能彻底清除，如果仍然存在，重复步骤 7-8
+```
+
+#### 第五步：生成报告（可选）
+```
+10. 调用 export_report 导出检测报告存档
+```
+
+---
+
+## 示例提示词
+
+直接复制以下提示词发送给 AI 即可开始检测：
+
+### 本地检测
+```
+帮我检测本机的 Java Web 服务，排查是否存在内存马。
+
+检测要求：
+1. 先下载检测工具，然后列出 Java 进程找到目标 PID
+2. 扫描该进程，获取所有可疑类列表
+3. 对每个可疑类反编译源代码，分析是否为内存马
+4. 如果确认是内存马，执行移除操作
+5. 移除后再次扫描验证，某些内存马需要多次移除才能彻底清除
+6. 最后给我一个检测报告总结
+```
+
+### SSH 远程检测
+```
+帮我检测远程服务器上的 Java 服务是否存在内存马。
+
+服务器信息：
+- IP: 192.168.1.100
+- 用户名: root
+- 密码: your_password
+
+检测要求：
+1. 通过 SSH 连接到服务器
+2. 下载检测工具到 /tmp 目录
+3. 列出所有 Java 进程，扫描可疑进程
+4. 反编译分析每个可疑类的源代码
+5. 确认是内存马后执行移除，并验证移除结果
+6. 生成检测报告
+```
+
+---
+
+## 内存马类型说明
+
+| 类型 | 特征 | 移除难度 |
+|------|------|----------|
+| Filter 型 | 实现 `javax.servlet.Filter`，动态注册到 FilterChain | 中等，可能需要多次移除 |
+| Servlet 型 | 继承 `HttpServlet`，动态注册路由 | 中等 |
+| Listener 型 | 实现 `ServletRequestListener` 等 | 较易 |
+| Spring Controller | 使用 `@RequestMapping` 动态注册 | 中等 |
+| Spring Interceptor | 实现 `HandlerInterceptor` | 中等 |
+| Agent 型 | 通过 `Instrumentation` 修改字节码 | 困难，可能需要重启 |
+| Valve 型 (Tomcat) | 继承 `ValveBase` | 中等 |
+
+---
+
+## 旧版使用流程（简化版）
+
 ### 1. 下载检测工具
 
 ```
 调用 download_detector_tools
-- 不指定 tools_dir 则从 TOOLS_DIR 环境变量读取，都没有则下载到系统临时目录
-- 会自动检测网络是否可用
-- 如果工具已存在则跳过下载
 ```
 
 ### 2. 列出 Java 进程
@@ -185,10 +279,7 @@ memory-shell-mcp
 ### 5. 移除内存马
 
 ```
-# 第一次调用：获取源代码供 AI 分析
-调用 remove_memory_shell(class_name="类名", pid=进程ID)
-
-# AI 确认后第二次调用：执行移除
+# AI 确认后调用
 调用 remove_memory_shell(class_name="类名", pid=进程ID, ai_confirmed=True)
 ```
 
